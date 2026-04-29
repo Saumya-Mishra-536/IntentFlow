@@ -1,0 +1,138 @@
+{
+    "manifest_version": 3,
+    "name": "AI SEO Extension",
+    "version": "0.0.1",
+    "description": "Visualize ChatGPT search patterns and generate SEO insights",
+    "side_panel": {
+        "default_path": "index.html"
+    },
+    "action": {
+        "default_title": "Open AI SEO Sidebar"
+    },
+    "background": {
+        "service_worker": "src/background.ts",
+        "type": "module"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://chatgpt.com/*",
+                "https://chat.openai.com/*"
+            ],
+            "js": [
+                "src/content/chatgptStreamContent.ts"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://chatgpt.com/*",
+                "https://chat.openai.com/*"
+            ],
+            "js": [
+                "src/content/chatgptStreamMain.ts"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://claude.ai/*"
+            ],
+            "js": [
+                "src/content/claudeStreamContent.ts"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://claude.ai/*"
+            ],
+            "js": [
+                "src/content/claudeStreamMain.ts"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://www.perplexity.ai/*",
+                "https://perplexity.ai/*"
+            ],
+            "js": [
+                "src/content/perplexityStreamContent.ts"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://www.perplexity.ai/*",
+                "https://perplexity.ai/*"
+            ],
+            "js": [
+                "src/content/perplexityStreamMain.ts"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "https://grok.com/*",
+                "https://www.grok.com/*"
+            ],
+            "js": [
+                "src/content/grokStreamContent.ts"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://grok.com/*",
+                "https://www.grok.com/*"
+            ],
+            "js": [
+                "src/content/grokStreamMain.ts"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN"
+        },
+        {
+            "matches": [
+                "http://localhost:5173/*",
+                "http://127.0.0.1:5173/*",
+                "http://localhost:4173/*",
+                "http://127.0.0.1:4173/*"
+            ],
+            "js": [
+                "src/content/webAppBridgeContent.ts"
+            ],
+            "run_at": "document_start"
+        }
+    ],
+    "icons": {
+        "16": "icon-16.png",
+        "32": "icon-32.png",
+        "48": "icon-48.png",
+        "128": "icon-128.png"
+    },
+    "permissions": [
+        "activeTab",
+        "tabs",
+        "scripting",
+        "sidePanel",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*",
+        "https://grok.com/*",
+        "https://www.grok.com/*",
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*",
+        "http://localhost:4173/*",
+        "http://127.0.0.1:4173/*"
+    ]
+}
