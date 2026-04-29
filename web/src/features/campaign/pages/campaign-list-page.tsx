@@ -24,7 +24,7 @@ import {
   Wand2,
   X,
 } from 'lucide-react';
-import { AppLayoutContext } from './app-layout';
+import { AppLayoutContext } from '@/features/core/pages/app-layout';
 import {
   AnalyticsRange,
   ai_chat_provider,

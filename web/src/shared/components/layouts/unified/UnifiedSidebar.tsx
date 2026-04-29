@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { NewCampaignDialog } from '@/shared/components/new-campaign-dialog';
+import { NewCampaignDialog } from '@/features/campaign/components/CampaignCreation';
 import {
   Sidebar,
   SidebarContent,

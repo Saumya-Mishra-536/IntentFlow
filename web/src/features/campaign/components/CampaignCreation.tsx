@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/components/ui/dialog';
 import { ai_chat_provider, auth_storage, create_campaign, DomainSummary, link_campaign_chat_thread } from '@/shared/lib/auth';
 import { toast } from 'sonner';
-
-interface CreateCampaignFormProps {
-  domains: DomainSummary[];
-  onCancel?: () => void;
-  onSuccess?: () => void;
-}
 
 import chatgptLogo from '/chatgpt.svg';
 import claudeLogo from '/claude.svg';
@@ -25,6 +26,12 @@ const provider_options: Array<{ id: ai_chat_provider; label: string; logo: strin
   { id: 'perplexity', label: 'Perplexity', logo: perplexityLogo },
   { id: 'grok', label: 'Grok', logo: grokLogo },
 ];
+
+interface CreateCampaignFormProps {
+  domains: DomainSummary[];
+  onCancel?: () => void;
+  onSuccess?: () => void;
+}
 
 export function CreateCampaignForm({ domains, onCancel, onSuccess }: CreateCampaignFormProps) {
   const navigate = useNavigate();
@@ -193,5 +200,34 @@ export function CreateCampaignForm({ domains, onCancel, onSuccess }: CreateCampa
         </Button>
       </div>
     </form>
+  );
+}
+
+interface NewCampaignDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  domains: DomainSummary[];
+}
+
+export function NewCampaignDialog({ open, onOpenChange, domains }: NewCampaignDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>New Campaign</DialogTitle>
+          <DialogDescription>
+            Create a new campaign to capture and analyze AI search prompts.
+          </DialogDescription>
+        </DialogHeader>
+        <CreateCampaignForm
+          domains={domains}
+          onCancel={() => onOpenChange(false)}
+          onSuccess={() => {
+            onOpenChange(false);
+            window.location.reload();
+          }}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }

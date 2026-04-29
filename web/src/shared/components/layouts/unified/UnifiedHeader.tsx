@@ -23,7 +23,7 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Moon, Sun, MessageSquare, Plus, Globe } from 'lucide-react';
 import { AccountMembership, auth_storage, create_domain, DomainSummary } from '@/shared/lib/auth';
-import { NewCampaignDialog } from '@/shared/components/new-campaign-dialog';
+import { NewCampaignDialog } from '@/features/campaign/components/CampaignCreation';
 import { toast } from 'sonner';
 
 function ThemeToggle() {

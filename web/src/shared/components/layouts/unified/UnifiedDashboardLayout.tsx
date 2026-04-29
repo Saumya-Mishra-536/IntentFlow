@@ -1,8 +1,8 @@
 import { SidebarInset, SidebarProvider } from '@/shared/components/ui/sidebar';
 import { AccountMembership, CampaignSummary, DomainSummary } from '@/shared/lib/auth';
 import { cn } from '@/shared/lib/utils';
-import { UnifiedHeader } from './UnifiedHeader';
-import { UnifiedSidebar } from './UnifiedSidebar';
+import { UnifiedHeader } from '@/shared/components/layouts/unified/UnifiedHeader';
+import { UnifiedSidebar } from '@/shared/components/layouts/unified/UnifiedSidebar';
 
 interface UnifiedDashboardLayoutProps {
   children: React.ReactNode;

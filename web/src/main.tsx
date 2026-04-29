@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './index.css'
-import App from './App'
+import App from '@/App'
 
 // Apply saved theme before first render — default to dark
 const savedTheme = localStorage.getItem('theme') ?? 'dark'

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { analytics_api } from '../lib/analytics';
-import { auth_storage } from '../lib/auth';
+import { analytics_api } from '@/shared/lib/analytics';
+import { auth_storage } from '@/shared/lib/auth';
 
 export function useWebAnalytics() {
     const sessionStartTime = useRef<number>(Date.now());

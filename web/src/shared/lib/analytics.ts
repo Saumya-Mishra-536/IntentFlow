@@ -1,4 +1,4 @@
-import { auth_storage } from './auth';
+import { auth_storage } from '@/shared/lib/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://ai-seo-monorepo.onrender.com';
 

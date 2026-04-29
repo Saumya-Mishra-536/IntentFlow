@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
-import { AppLayoutContext } from './app-layout';
+import { AppLayoutContext } from '@/features/core/pages/app-layout';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
 import {
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
-import { NewCampaignDialog } from '@/shared/components/new-campaign-dialog';
+import { NewCampaignDialog } from '@/features/campaign/components/CampaignCreation';
 import { ArrowUpDown, FolderOpen, ListTree, Loader2, Plus, SlidersHorizontal, X } from 'lucide-react';
 import { AnalyticsRange } from '@/shared/lib/auth';
 import { useDashboardAnalytics } from '@/features/analytics/hooks/useDashboardAnalytics';

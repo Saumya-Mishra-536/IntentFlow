@@ -14,7 +14,7 @@ import {
 import { prisma } from '../../utils/prisma';
 import { NodeType, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
-import { AHREFS_URL, OPENAI_API_KEY, OPENAI_MODEL, SEMRUSH_URL } from '../../config/env';
+import { AHREFS_URL, GEMINI_API_KEY, SEMRUSH_URL } from '../../config/env';
 import { SemrushSiteInput } from '../../queue/semrush.types';
 import { leadIntelligenceService } from '../lead-intelligence/lead-intelligence.service';
 import { fetch_semrush_site_insights } from '../../queue/workers/semrush.client';
@@ -740,8 +740,8 @@ const build_suggestions_from_openai = async (
     recent_prompts: string[],
     max_suggestions: number,
 ): Promise<SuggestedPromptCandidate[]> => {
-    if (!OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY is not configured');
+    if (!GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY is not configured');
     }
 
     const limit = Math.min(Math.max(max_suggestions, 1), 25);
@@ -757,25 +757,24 @@ const build_suggestions_from_openai = async (
         'Each prompt should be concise and practical.',
     ].join(' ');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            model: OPENAI_MODEL,
-            temperature: 0.7,
-            response_format: { type: 'json_object' },
-            messages: [
-                { role: 'system', content: system_message },
-                {
-                    role: 'user',
-                    content: `Executed prompts:\n${prompt_lines}`,
-                },
-            ],
-        }),
-    });
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system_instruction: { parts: [{ text: system_message }] },
+                contents: [
+                    {
+                        parts: [{ text: `Executed prompts:\n${prompt_lines}` }]
+                    }
+                ],
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                }
+            })
+        }
+    );
 
     const raw_text = await response.text();
     if (!response.ok) {
@@ -789,9 +788,12 @@ const build_suggestions_from_openai = async (
         throw new Error('Suggestion generation returned invalid JSON');
     }
 
-    const choice = to_record(to_array(to_record(payload)?.choices)[0]) ?? {};
-    const message = to_record(choice.message) ?? {};
-    const content_raw = get_string(message.content) ?? '';
+    const candidates = to_array(to_record(payload)?.candidates) ?? [];
+    const firstCandidate = to_record(candidates[0]) ?? {};
+    const content = to_record(firstCandidate.content) ?? {};
+    const parts = to_array(content.parts) ?? [];
+    const firstPart = to_record(parts[0]) ?? {};
+    const content_raw = get_string(firstPart.text) ?? '';
     const parsed_content = parse_json_object_from_text(content_raw);
     if (!parsed_content) {
         throw new Error('Suggestion generation returned unparsable content');

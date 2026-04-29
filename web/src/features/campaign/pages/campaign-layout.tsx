@@ -1,5 +1,5 @@
 import { Outlet, useOutletContext } from 'react-router-dom';
-import { AppLayoutContext } from './app-layout';
+import { AppLayoutContext } from '@/features/core/pages/app-layout';
 
 export default function CampaignLayout() {
   const context = useOutletContext<AppLayoutContext>();

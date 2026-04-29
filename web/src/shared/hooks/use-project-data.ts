@@ -11,8 +11,8 @@ import {
   logout,
   OnboardingContext,
   switch_account,
-} from '../lib/auth';
-import { analytics_api } from '../lib/analytics';
+} from '@/shared/lib/auth';
+import { analytics_api } from '@/shared/lib/analytics';
 
 export interface ProjectUser {
   id: string;

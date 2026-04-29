@@ -3,23 +3,23 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import './App.css';
-import { AdminRoute } from './shared/components/admin-route';
-import { analytics_api } from './shared/lib/analytics';
-import { useWebAnalytics } from './shared/hooks/use-web-analytics';
+import { AdminRoute } from '@/shared/components/admin-route';
+import { analytics_api } from '@/shared/lib/analytics';
+import { useWebAnalytics } from '@/shared/hooks/use-web-analytics';
 
-const AppLayout = lazy(() => import('./pages/app-layout'));
-const AuthCallbackPage = lazy(() => import('./pages/auth-callback-page'));
-const DashboardPage = lazy(() => import('./pages/dashboard-page'));
-const ExtensionConnectPage = lazy(() => import('./pages/extension-connect-page'));
-const OnboardingPage = lazy(() => import('./pages/onboarding-page'));
-const WorkspacePage = lazy(() => import('./pages/workspace-page'));
-const CampaignLayout = lazy(() => import('./pages/campaign-layout'));
-const CampaignListPage = lazy(() => import('./pages/campaign-list-page'));
-const SignInPage = lazy(() => import('./pages/sign-in-page'));
-const AdminDashboardPage = lazy(() => import('./pages/admin-dashboard'));
-const AdminUsersPage = lazy(() => import('./pages/admin-users-page'));
-const AdminEventsPage = lazy(() => import('./pages/admin-events-page'));
-const AdminSignalsPage = lazy(() => import('./pages/admin-signals-page'));
+const AppLayout = lazy(() => import('@/features/core/pages/app-layout'));
+const AuthCallbackPage = lazy(() => import('@/features/auth/pages/auth-callback-page'));
+const DashboardPage = lazy(() => import('@/features/core/pages/dashboard-page'));
+const ExtensionConnectPage = lazy(() => import('@/features/core/pages/extension-connect-page'));
+const OnboardingPage = lazy(() => import('@/features/core/pages/onboarding-page'));
+const WorkspacePage = lazy(() => import('@/features/core/pages/workspace-page'));
+const CampaignLayout = lazy(() => import('@/features/campaign/pages/campaign-layout'));
+const CampaignListPage = lazy(() => import('@/features/campaign/pages/campaign-list-page'));
+const SignInPage = lazy(() => import('@/features/auth/pages/sign-in-page'));
+const AdminDashboardPage = lazy(() => import('@/features/admin/pages/admin-dashboard'));
+const AdminUsersPage = lazy(() => import('@/features/admin/pages/admin-users-page'));
+const AdminEventsPage = lazy(() => import('@/features/admin/pages/admin-events-page'));
+const AdminSignalsPage = lazy(() => import('@/features/admin/pages/admin-signals-page'));
 
 function RouteFallback() {
   return (

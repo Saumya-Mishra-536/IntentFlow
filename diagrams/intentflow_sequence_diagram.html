@@ -1,0 +1,178 @@
+
+<style>
+#seq { padding: 8px 0; }
+#seq svg { width: 100%; }
+.seq-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.seq-tab { padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--color-border-secondary); background: var(--color-background-secondary); color: var(--color-text-secondary); transition: all .15s; }
+.seq-tab.active { background: #534AB7; color: #EEEDFE; border-color: #534AB7; }
+</style>
+<h2 class="sr-only">IntentFlow Sequence Diagrams for key system flows</h2>
+
+<div class="seq-tabs">
+  <button class="seq-tab active" onclick="showSeq(0)">Capture flow</button>
+  <button class="seq-tab" onclick="showSeq(1)">Auth flow</button>
+  <button class="seq-tab" onclick="showSeq(2)">Campaign creation</button>
+  <button class="seq-tab" onclick="showSeq(3)">Suggestion generation</button>
+</div>
+<div id="seq"></div>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    activationBorderColor: dark ? '#AFA9EC' : '#534AB7',
+    activationBkgColor: dark ? '#26215C' : '#EEEDFE',
+    noteBkgColor: dark ? '#085041' : '#E1F5EE',
+    noteBorderColor: dark ? '#1D9E75' : '#0F6E56',
+    noteTextColor: dark ? '#9FE1CB' : '#085041',
+  },
+});
+
+const diagrams = [
+`sequenceDiagram
+  autonumber
+  participant U as User
+  participant EX as Chrome Extension
+  participant CS as Content Script
+  participant BG as Background Worker
+  participant BE as Backend API
+  participant DB as PostgreSQL
+
+  U->>EX: Opens AI chat (ChatGPT/Claude/Perplexity)
+  EX->>CS: Inject content script into provider page
+  U->>CS: Types and submits a prompt
+  CS->>CS: Intercept streaming response via XHR/fetch hook
+  CS->>BG: postMessage: { prompt, stream_chunks }
+  BG->>BG: Aggregate turn data from stream
+  BG->>EX: Forward turn preview to side panel UI
+  EX->>U: Show live tree preview (RAM)
+
+  U->>EX: Clicks "Save / Ingest"
+  EX->>BE: POST /api/campaigns/:id/turns (normalized payload)
+  BE->>BE: Validate JWT + tenant context
+  BE->>BE: Normalize facts, dedupe subqueries & sites
+  BE->>DB: Insert CaptureTurn + PromptNodes
+  DB-->>BE: Persisted node IDs
+  BE-->>EX: 200 OK + tree snapshot
+  EX->>BE: GET /api/campaigns/:id/tree
+  BE->>DB: Query PromptNodes by campaign version
+  DB-->>BE: Ordered node tree
+  BE-->>EX: DB-authoritative tree
+  EX->>U: Render final tree from DB`,
+
+`sequenceDiagram
+  autonumber
+  participant U as User
+  participant W as Web / Extension
+  participant BE as Backend API
+  participant DB as PostgreSQL
+  participant G as Google OAuth
+
+  U->>W: Click "Sign in with Google"
+  W->>BE: GET /api/auth/google
+  BE->>G: Redirect to Google consent screen
+  G-->>U: Show consent screen
+  U->>G: Grant permission
+  G-->>BE: Callback with auth code
+  BE->>G: Exchange code for profile
+  G-->>BE: User profile (email, name, avatar)
+  BE->>DB: Upsert User + OAuthAccount
+  DB-->>BE: User record
+  BE->>DB: Insert RefreshToken
+  BE-->>W: JWT access token + refresh token
+  W->>W: Store tokens in local storage
+
+  Note over U,W: Later — token expires
+  W->>BE: POST /api/auth/refresh { refresh_token }
+  BE->>DB: Validate token hash, check expiry
+  DB-->>BE: Token valid
+  BE->>DB: Rotate refresh token
+  BE-->>W: New access token + refresh token`,
+
+`sequenceDiagram
+  autonumber
+  participant U as User
+  participant W as Web App
+  participant BE as Backend API
+  participant DB as PostgreSQL
+
+  U->>W: Click "New Campaign"
+  W->>U: Show campaign form
+  U->>W: Fill name, goal, domain, location
+  W->>BE: POST /api/campaigns { name, domain_id, ... }
+  BE->>BE: Validate JWT + extract tenant_id
+  BE->>DB: Insert Campaign record
+  DB-->>BE: Campaign ID
+  BE->>DB: Insert CampaignVersion (v1, is_active=true)
+  DB-->>BE: Version ID
+  BE-->>W: { campaign_id, version_id }
+  W->>W: Navigate to campaign graph/list view
+  W->>BE: GET /api/campaigns/:id/tree
+  BE->>DB: Query active CampaignVersion + PromptNodes
+  DB-->>BE: Empty tree (no nodes yet)
+  BE-->>W: Empty tree response
+  W->>U: Show empty campaign ready for capture`,
+
+`sequenceDiagram
+  autonumber
+  participant U as User
+  participant W as Web / Extension
+  participant BE as Backend API
+  participant Q as BullMQ Queue
+  participant SW as SEMrush Worker
+  participant SR as SEMrush API
+  participant DB as PostgreSQL
+
+  U->>W: Click "Generate Suggestions"
+  W->>BE: POST /api/campaigns/:id/generate { version_id }
+  BE->>DB: Fetch unique site PromptNodes for version
+  DB-->>BE: Site node list
+  BE->>DB: Insert GenerationRun (status: queued)
+  BE->>Q: Enqueue SEMrush jobs per site node
+  BE-->>W: 202 Accepted { run_id }
+  W->>U: Show "Generating..." state
+
+  loop For each site node
+    Q->>SW: Dequeue job
+    SW->>SR: GET keyword metrics for domain/query
+    SR-->>SW: Metrics JSON
+    SW->>DB: Insert SemrushSnapshot
+    SW->>DB: Insert generated PromptNode (type: generated)
+  end
+
+  SW->>DB: Update GenerationRun (status: completed)
+  W->>BE: Poll GET /api/campaigns/:id/tree
+  BE->>DB: Query PromptNodes including generated type
+  DB-->>BE: Full enriched tree
+  BE-->>W: Tree with suggestions
+  W->>U: Display SEO suggestions in campaign view`
+];
+
+window._seqDiagrams = diagrams;
+window._mermaid = mermaid;
+window._currentSeq = 0;
+
+async function renderSeq(idx) {
+  document.getElementById('seq').innerHTML = '<p style="font-size:13px;color:var(--color-text-secondary);padding:8px 0">Rendering…</p>';
+  const { svg } = await window._mermaid.render('seq-svg-' + idx + '-' + Date.now(), window._seqDiagrams[idx]);
+  document.getElementById('seq').innerHTML = svg;
+  document.getElementById('seq').querySelector('svg').style.width = '100%';
+}
+
+window.showSeq = function(idx) {
+  window._currentSeq = idx;
+  document.querySelectorAll('.seq-tab').forEach((t,i) => t.classList.toggle('active', i === idx));
+  renderSeq(idx);
+};
+
+renderSeq(0);
+</script>

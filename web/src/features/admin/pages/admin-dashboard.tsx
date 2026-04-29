@@ -7,7 +7,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Shield, Activity, Users, Target, Activity as Pulse, Zap, Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
-import { AppLayoutContext } from './app-layout';
+import { AppLayoutContext } from '@/features/core/pages/app-layout';
 import { auth_storage } from '@/shared/lib/auth';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://ai-seo-monorepo.onrender.com';

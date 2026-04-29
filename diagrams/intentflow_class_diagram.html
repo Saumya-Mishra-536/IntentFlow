@@ -1,0 +1,249 @@
+
+<style>
+#cls { padding: 8px 0; }
+#cls svg { width: 100%; }
+</style>
+<h2 class="sr-only">IntentFlow Class Diagram showing classes, attributes, methods, and relationships</h2>
+<div id="cls"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const { svg } = await mermaid.render('cls-svg', `classDiagram
+  class User {
+    +String id
+    +String email
+    +String name
+    +AppRole app_role
+    +String company_domain
+    +Float lead_score_current
+    +String lead_segment
+    +String active_tenant_id
+    +login() void
+    +logout() void
+    +switchTenant(tenantId) void
+    +setPassword(password) void
+  }
+
+  class Tenant {
+    +String id
+    +String slug
+    +String name
+    +String owner_user_id
+    +addMember(userId, role) void
+    +removeMember(userId) void
+  }
+
+  class TenantMember {
+    +String id
+    +String tenant_id
+    +String user_id
+    +String role
+  }
+
+  class Domain {
+    +String id
+    +String tenant_id
+    +String normalized_domain
+    +DomainScrapeStatus scrape_status
+    +triggerScrape() void
+    +getContext() DomainContext
+  }
+
+  class DomainContext {
+    +String id
+    +String domain_id
+    +Json context_json
+    +Json pages_json
+    +DateTime extracted_at
+  }
+
+  class DomainScrapeRun {
+    +String id
+    +String domain_id
+    +DomainScrapeStatus status
+    +Int page_count
+    +String error_message
+  }
+
+  class Campaign {
+    +String id
+    +String tenant_id
+    +String domain_id
+    +String name
+    +String primary_goal
+    +DateTime archived_at
+    +createVersion() CampaignVersion
+    +archive() void
+    +getActiveVersion() CampaignVersion
+  }
+
+  class CampaignVersion {
+    +String id
+    +String campaign_id
+    +Int version_number
+    +CampaignVersionStatus status
+    +Boolean is_active
+    +Json config_json
+    +activate() void
+    +archive() void
+    +refire() CampaignVersion
+  }
+
+  class CaptureSession {
+    +String id
+    +String campaign_version_id
+    +AiChatProvider chat_provider
+    +String conversation_id
+    +CaptureStatus status
+    +DateTime started_at
+    +addTurn(turn) CaptureTurn
+    +complete() void
+  }
+
+  class CaptureTurn {
+    +String id
+    +String capture_session_id
+    +String prompt
+    +Json raw_event_json
+    +DateTime prompt_detected_at
+    +DateTime response_finished_at
+    +materializeNodes() PromptNode[]
+  }
+
+  class PromptNode {
+    +String id
+    +String campaign_version_id
+    +String parent_id
+    +NodeType type
+    +String content
+    +Int depth
+    +getChildren() PromptNode[]
+    +refresh() void
+  }
+
+  class GenerationRun {
+    +String id
+    +String campaign_version_id
+    +RunStatus status
+    +Int depth_limit
+    +Int node_limit
+    +start() void
+    +complete() void
+    +fail(error) void
+  }
+
+  class SemrushSnapshot {
+    +String id
+    +String campaign_version_id
+    +String prompt_node_id
+    +String query_text
+    +Json summary_metrics
+    +Json raw_response
+    +DateTime fetched_at
+  }
+
+  class AnalyticsEvent {
+    +String id
+    +String tenant_id
+    +String user_id
+    +String campaign_id
+    +String event_name
+    +Json properties
+    +DateTime created_at
+  }
+
+  class LeadSignal {
+    +String id
+    +String user_id
+    +String campaign_version_id
+    +String signal_type
+    +Float confidence
+    +Json value
+    +DateTime created_at
+  }
+
+  class AuthService {
+    +login(email, password) TokenPair
+    +loginOAuth(provider, code) TokenPair
+    +refreshToken(token) TokenPair
+    +issueAuthCode(userId) AuthCode
+    +exchangeExtensionCode(code) TokenPair
+  }
+
+  class CampaignService {
+    +createCampaign(data) Campaign
+    +ingestCaptureTurn(data) PromptNode[]
+    +getActiveTree(campaignId) PromptNode[]
+    +refireVersion(campaignId, versionId) CampaignVersion
+    +triggerGeneration(versionId) GenerationRun
+    +refreshNode(nodeId) void
+  }
+
+  class AnalyticsService {
+    +trackEvent(event) void
+    +getAdminStats() Stats
+    +getAdminUsers() User[]
+    +getAdminSignals() LeadSignal[]
+    +cleanup() void
+  }
+
+  User "1" --> "0..*" TenantMember : belongs to
+  User "1" --> "0..*" Tenant : owns
+  Tenant "1" --> "0..*" TenantMember : has
+  Tenant "1" --> "0..*" Domain : has
+  Tenant "1" --> "0..*" Campaign : has
+  Domain "1" --> "0..1" DomainContext : has
+  Domain "1" --> "0..*" DomainScrapeRun : tracks
+  Domain "1" --> "0..*" Campaign : linked to
+  Campaign "1" --> "0..*" CampaignVersion : versions
+  CampaignVersion "1" --> "0..*" CaptureSession : sessions
+  CampaignVersion "1" --> "0..*" PromptNode : contains
+  CampaignVersion "1" --> "0..*" GenerationRun : runs
+  CampaignVersion "1" --> "0..*" SemrushSnapshot : snapshots
+  CaptureSession "1" --> "0..*" CaptureTurn : turns
+  CaptureTurn "1" --> "0..*" PromptNode : materializes
+  PromptNode "1" --> "0..*" PromptNode : children
+  PromptNode "1" --> "0..*" SemrushSnapshot : enriched by
+  User "1" --> "0..*" AnalyticsEvent : triggers
+  User "1" --> "0..*" LeadSignal : generates
+  AuthService ..> User : manages
+  CampaignService ..> Campaign : manages
+  CampaignService ..> CaptureTurn : ingests
+  AnalyticsService ..> AnalyticsEvent : records
+  AnalyticsService ..> LeadSignal : reads
+`);
+document.getElementById('cls').innerHTML = svg;
+
+document.querySelectorAll('#cls svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+</script>

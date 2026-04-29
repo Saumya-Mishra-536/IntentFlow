@@ -25,8 +25,7 @@ export const CORS_ALLOWED_ORIGINS = getEnv(
   'http://localhost:5173,https://ai-seo-monorepo.vercel.app',
 );
 export const REQUEST_BODY_LIMIT = getEnv('REQUEST_BODY_LIMIT', '2mb');
-export const OPENAI_API_KEY = getEnv('OPENAI_API_KEY', '');
-export const OPENAI_MODEL = getEnv('OPENAI_MODEL', 'gpt-4o-mini');
+export const GEMINI_API_KEY = getEnv('GEMINI_API_KEY', '');
 export const SEMRUSH_URL = getEnv('SEMRUSH_URL', '');
 export const SEMRUSH_LOG_FULL_RESPONSE = getEnv('SEMRUSH_LOG_FULL_RESPONSE', 'false');
 export const AHREFS_URL = getEnv('AHREFS_URL', '');

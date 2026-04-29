@@ -16,7 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from '@dagrejs/dagre';
-import { AppLayoutContext } from './app-layout';
+import { AppLayoutContext } from '@/features/core/pages/app-layout';
 import { auth_storage, CampaignTreeNode, CampaignVersionSummary, get_campaign_tree, get_campaign_versions } from '@/shared/lib/auth';
 
 const NODE_W = 240;

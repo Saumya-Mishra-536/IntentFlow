@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { auth_storage } from '../lib/auth';
+import { auth_storage } from '@/shared/lib/auth';
 
 export function AdminRoute({ children }: { children: ReactNode }) {
     const user = auth_storage.get_user();
