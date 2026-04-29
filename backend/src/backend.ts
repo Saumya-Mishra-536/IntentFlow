@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { leadIntelligenceService } from './utils/lead-intelligence/lead-intelligence.service';
+import { leadIntelligenceService } from './integrations/lead-intelligence/lead-intelligence.service';
 import express, { Application, NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import helmet from 'helmet';
 import jwt, { SignOptions } from 'jsonwebtoken';

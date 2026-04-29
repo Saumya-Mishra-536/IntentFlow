@@ -1,4 +1,4 @@
-import { prisma } from '../prisma';
+import { prisma } from '../../utils/prisma';
 
 export class LeadIntelligenceService {
     private readonly MODEL_VERSION = 'v1-demo';
