@@ -3,7 +3,7 @@ import { Worker } from 'bullmq';
 import { logger } from '../../utils/logger';
 import { queue_connection } from '../connection';
 import { SemrushInsightsJobPayload, SemrushSiteInsightResult } from '../semrush.types';
-import { fetch_semrush_site_insights } from './semrush.client';
+import { fetch_semrush_site_insights } from '../../integrations/semrush.client';
 
 export const semrush_worker = new Worker<SemrushInsightsJobPayload, SemrushSiteInsightResult[]>(
   'semrush_fetch_queue',

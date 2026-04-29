@@ -4,7 +4,6 @@ import helmet from 'helmet';
 
 import config from '../config';
 import authRoutes from '../modules/auth/auth.routes';
-import exampleRoutes from '../modules/example/example.routes';
 import onboardingRoutes from '../modules/onboarding/onboarding.routes';
 import { campaignRouter } from '../modules/campaign/campaign.routes';
 import { workspaceWorkflowRouter } from '../modules/campaign/workspace.routes';
@@ -68,7 +67,6 @@ const expressLoader = async (app: Application): Promise<void> => {
   // Note: rate limiting is applied per-route inside auth.routes.ts
   app.use('/api/auth', authRoutes);
   app.use('/api/onboarding', onboardingRoutes);
-  app.use('/api/example', exampleRoutes);
   app.use('/api/campaigns', campaignRouter);
   app.use('/api/workspaces', workspaceWorkflowRouter);
   app.use('/api/accounts', accountRoutes);

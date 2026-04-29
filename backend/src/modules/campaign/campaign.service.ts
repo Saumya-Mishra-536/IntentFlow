@@ -16,9 +16,9 @@ import { NodeType, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { AHREFS_URL, GEMINI_API_KEY, SEMRUSH_URL } from '../../config/env';
 import { SemrushSiteInput } from '../../queue/semrush.types';
-import { leadIntelligenceService } from '../lead-intelligence/lead-intelligence.service';
-import { fetch_semrush_site_insights } from '../../queue/workers/semrush.client';
-import { fetch_ahrefs_site_insights } from '../../queue/workers/ahrefs.client';
+import { leadIntelligenceService } from '../../utils/lead-intelligence/lead-intelligence.service';
+import { fetch_semrush_site_insights } from '../../integrations/semrush.client';
+import { fetch_ahrefs_site_insights } from '../../integrations/ahrefs.client';
 import {
     normalize_conversation_payload,
     NormalizedConversationData,

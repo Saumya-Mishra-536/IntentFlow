@@ -30,5 +30,3 @@ export const SEMRUSH_URL = getEnv('SEMRUSH_URL', '');
 export const SEMRUSH_LOG_FULL_RESPONSE = getEnv('SEMRUSH_LOG_FULL_RESPONSE', 'false');
 export const AHREFS_URL = getEnv('AHREFS_URL', '');
 export const REDIS_URL = getEnv('REDIS_URL', 'redis://127.0.0.1:6379');
-export const OPENAI_API_KEY = getEnv('OPENAI_API_KEY', '');
-export const OPENAI_MODEL = getEnv('OPENAI_MODEL', 'gpt-4o');

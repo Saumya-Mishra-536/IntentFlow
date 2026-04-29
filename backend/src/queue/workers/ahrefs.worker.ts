@@ -3,7 +3,7 @@ import { Worker } from 'bullmq';
 import { logger } from '../../utils/logger';
 import { queue_connection } from '../connection';
 import { AhrefsInsightsJobPayload, SemrushSiteInsightResult } from '../semrush.types';
-import { fetch_ahrefs_site_insights } from './ahrefs.client';
+import { fetch_ahrefs_site_insights } from '../../integrations/ahrefs.client';
 
 export const ahrefs_worker = new Worker<AhrefsInsightsJobPayload, SemrushSiteInsightResult[]>(
   'ahrefs_fetch_queue',

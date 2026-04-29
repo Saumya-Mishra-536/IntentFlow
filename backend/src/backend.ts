@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { leadIntelligenceService } from './utils/lead-intelligence/lead-intelligence.service';
 import express, { Application, NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import helmet from 'helmet';
 import jwt, { SignOptions } from 'jsonwebtoken';
@@ -38,8 +39,6 @@ const SEMRUSH_URL = getEnv('SEMRUSH_URL', '');
 const SEMRUSH_LOG_FULL_RESPONSE = getEnv('SEMRUSH_LOG_FULL_RESPONSE', 'false');
 const AHREFS_URL = getEnv('AHREFS_URL', '');
 const REDIS_URL = getEnv('REDIS_URL', 'redis://127.0.0.1:6379');
-const OPENAI_API_KEY = getEnv('OPENAI_API_KEY', '');
-const OPENAI_MODEL = getEnv('OPENAI_MODEL', 'gpt-4o');
 
 const config = {
   PORT, NODE_ENV, DATABASE_URL, JWT_SECRET, JWT_ACCESS_TTL, JWT_REFRESH_TTL_DAYS,
@@ -186,7 +185,6 @@ const expressLoader = async (app: Application): Promise<void> => {
   // Note: rate limiting is applied per-route inside auth.routes.ts
   app.use('/api/auth', auth_router);
   app.use('/api/onboarding', onboarding_router);
-  app.use('/api/example', example_router);
   app.use('/api/campaigns', campaign_router);
   app.use('/api/workspaces', workspace_workflow_router);
   app.use('/api/accounts', account_router);
@@ -7787,13 +7785,13 @@ const build_heuristic_domain_sections = (params: {
   };
 };
 
-const build_openai_domain_context = async (params: {
+const build_gemini_domain_context = async (params: {
   domain: string;
   summary: string;
   keywords: string[];
   pages: ScrapedPage[];
 }): Promise<Record<string, unknown> | null> => {
-  if (!OPENAI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return null;
   }
 
@@ -7809,67 +7807,62 @@ const build_openai_domain_context = async (params: {
       ].filter(Boolean).join('\n'),
     )
     .join('\n\n')
-    .slice(0, AI_CONTEXT_MAX_CHARS);
+    .slice(0, 26000);
 
-  const response = await with_timeout(
-    (signal) =>
-      fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        signal,
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
+  const prompt = `
+    You are an AI SEO analyst. 
+    Analyze the following website data and return a JSON object containing:
+    - summary (string): A 2-3 sentence overview of the business.
+    - business_context (string): Deep dive into their business model.
+    - market_context (string): Who are their competitors and where do they sit in the market?
+    - audience_context (string): Who is the target customer?
+    - goals_positioning (string): What are they trying to achieve?
+    - products_services (array of strings): List of main offerings.
+    - opportunities (array of strings): High-level growth/SEO opportunities.
+    - risks (array of strings): Potential business/SEO threats.
+    - messaging (array of strings): Key value propositions found.
+    - seo_focus_keywords (array of strings): 10-15 keywords to target.
+
+    Website: ${params.domain}
+    Existing Summary: ${params.summary}
+    Keywords: ${params.keywords.join(', ')}
+    
+    Page Content:
+    ${snippets}
+
+    Return ONLY raw JSON. Do not use markdown blocks.
+  `;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
           temperature: 0.2,
-          response_format: { type: 'json_object' },
-          messages: [
-            {
-              role: 'system',
-              content: [
-                'You are an AI SEO analyst.',
-                'Return strict JSON only.',
-                'Output keys:',
-                'summary (string),',
-                'business_context (string),',
-                'market_context (string),',
-                'audience_context (string),',
-                'goals_positioning (string),',
-                'products_services (array of strings),',
-                'opportunities (array of strings),',
-                'risks (array of strings),',
-                'messaging (array of strings),',
-                'seo_focus_keywords (array of strings).',
-                'Do not include markdown.',
-              ].join(' '),
-            },
-            {
-              role: 'user',
-              content: [
-                `Domain: ${params.domain}`,
-                `Summary: ${params.summary}`,
-                `Keywords: ${params.keywords.join(', ') || 'none'}`,
-                'Pages:',
-                snippets,
-              ].join('\n\n'),
-            },
-          ],
-        }),
+          response_mime_type: "application/json"
+        }
       }),
-    OPENAI_TIMEOUT_MS,
-  );
+    });
 
-  const raw_text = await response.text();
-  if (!response.ok) {
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('[Gemini Error]', err);
+      return null;
+    }
+
+    const data = await response.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) return null;
+
+    return parse_json_object_from_text(textContent);
+  } catch (error) {
+    console.error('[Gemini Request Failed]', error);
     return null;
   }
-  const parsed = parse_json_object_from_text(raw_text);
-  const choice = to_record(to_array(to_record(parsed)?.choices)[0]) ?? {};
-  const message = to_record(choice.message) ?? {};
-  const content = get_string(message.content);
-  if (!content) return null;
-  return parse_json_object_from_text(content);
 };
 
 const to_domain_summary = (domain: {
@@ -8033,7 +8026,7 @@ export class DomainService extends BaseService {
         excerpt: page.excerpt,
       }));
 
-      const ai_context = await build_openai_domain_context({
+      const ai_context = await build_gemini_domain_context({
         domain: new URL(params.homepage_url).hostname,
         summary,
         keywords,
@@ -8063,7 +8056,7 @@ export class DomainService extends BaseService {
           ? normalize_string_array(ai_context?.seo_focus_keywords, 18)
           : keywords,
         scrape_engine,
-        summary_provider: ai_context ? 'openai' : 'heuristic',
+        summary_provider: ai_context ? 'gemini' : 'heuristic',
       };
 
       await this.repository.saveDomainContext({
@@ -8104,185 +8097,6 @@ export type CreateDomainDto = z.infer<typeof createDomainSchema>;
 export const rescrapeDomainSchema = z.object({});
 
 export type RescrapeDomainDto = z.infer<typeof rescrapeDomainSchema>;
-// --- Merged from modules/example/dto/create-example.dto.ts ---
-
-export const createExampleSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-});
-
-export type CreateExampleDto = z.infer<typeof createExampleSchema>;
-
-
-// --- Merged from modules/example/example.controller.ts ---
-
-
-class ExampleController extends BaseController {
-  constructor(private readonly service: ExampleService = exampleService) {
-    super();
-  }
-
-  createExample = async (req: Request, res: Response) => {
-    const validated = createExampleSchema.parse(req.body);
-    const example = await this.service.createExample(validated);
-    return res.json(ApiResponse.success(example, 'Example created'));
-  };
-
-  getExamples = async (_req: Request, res: Response) => {
-    const examples = await this.service.getExamples();
-    return res.json(ApiResponse.success(examples, 'Examples retrieved'));
-  };
-}
-
-export const exampleController = new ExampleController();
-
-
-// --- Merged from modules/example/example.model.ts ---
-export interface Example {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: Date;
-}
-
-
-// --- Merged from modules/example/example.repository.ts ---
-
-
-export class ExampleRepository extends BaseRepository {
-  private examples: Example[] = [];
-
-  async create(payload: CreateExampleDto): Promise<Example> {
-    const example: Example = {
-      id: randomUUID(),
-      name: payload.name,
-      description: payload.description,
-      createdAt: new Date(),
-    };
-
-    this.examples.push(example);
-    return example;
-  }
-
-  async findAll(): Promise<Example[]> {
-    return this.examples;
-  }
-}
-
-export const exampleRepository = new ExampleRepository();
-
-
-// --- Merged from modules/example/example.routes.ts ---
-
-
-const example_router = Router();
-
-example_router.post('/', exampleController.createExample);
-example_router.get('/', exampleController.getExamples);
-
-export { example_router };
-
-
-// --- Merged from modules/example/example.service.ts ---
-
-export class ExampleService extends BaseService {
-  constructor(private readonly repository: ExampleRepository = exampleRepository) {
-    super();
-  }
-
-  createExample(payload: CreateExampleDto): Promise<Example> {
-    return this.repository.create(payload);
-  }
-
-  getExamples(): Promise<Example[]> {
-    return this.repository.findAll();
-  }
-}
-
-export const exampleService = new ExampleService();
-
-
-// --- Merged from modules/lead-intelligence/crm-webhook.service.ts ---
-export class CrmWebhookService {
-    async dispatchLeadUpdate(tenant_id: string, user_id: string, score: number, segment: string) {
-        // Stub for sending data to Salesforce / Hubspot
-        console.log(`[CRM Webhook] Dispatched Lead Update -> User: ${user_id}, Score: ${score}, Segment: ${segment}`);
-        // implementation would go here: HTTP POST to endpoint
-    }
-}
-
-export const crmWebhookService = new CrmWebhookService();
-// --- Merged from modules/lead-intelligence/lead-intelligence.service.ts ---
-
-export class LeadIntelligenceService {
-    private readonly MODEL_VERSION = 'v1-demo';
-
-    async extractSignalsFromTurn(tenant_id: string, user_id: string, turn_id: string, prompt_text: string) {
-        // Dummy extraction logic
-        const signals: Array<{ type: string; value: any; confidence: number }> = [];
-
-        const lower = prompt_text.toLowerCase();
-        if (lower.includes('budget') || lower.includes('price') || lower.includes('cost')) {
-            signals.push({ type: 'budget_intent', value: { mention: true }, confidence: 0.8 });
-        }
-        if (lower.includes('competitor') || lower.includes('vs')) {
-            signals.push({ type: 'competitor_comparison', value: { mention: true }, confidence: 0.7 });
-        }
-        if (lower.includes('buy') || lower.includes('purchase') || lower.includes('upgrade')) {
-            signals.push({ type: 'purchase_intent', value: { mention: true }, confidence: 0.9 });
-        }
-
-        if (signals.length === 0) return [];
-
-        const createdSignals = await Promise.all(
-            signals.map((s) =>
-                prisma.leadSignal.create({
-                    data: {
-                        tenant_id,
-                        user_id,
-                        signal_type: s.type,
-                        value: s.value,
-                        confidence: s.confidence,
-                        source_turn_id: turn_id,
-                    },
-                })
-            )
-        );
-
-        // After extracting, update user's lead score.
-        await this.computeLeadScore(tenant_id, user_id);
-
-        return createdSignals;
-    }
-
-    async computeLeadScore(tenant_id: string, user_id: string) {
-        const signals = await prisma.leadSignal.findMany({
-            where: { tenant_id, user_id },
-        });
-
-        let score = 0;
-        signals.forEach((s: any) => {
-            score += s.confidence * 10; // Simple base multiplier
-        });
-
-        const segment = score > 50 ? 'Hot' : score > 20 ? 'Warm' : 'Cold';
-
-        await prisma.user.update({
-            where: { id: user_id },
-            data: {
-                lead_score_current: score,
-                lead_segment: segment,
-                lead_score_updated_at: new Date(),
-                scoring_model_version: this.MODEL_VERSION,
-            },
-        });
-
-        return { score, segment };
-    }
-}
-
-export const leadIntelligenceService = new LeadIntelligenceService();
-// --- Merged from modules/onboarding/dto/bootstrap-onboarding.dto.ts ---
 
 const createAccountSchema = z.object({
   mode: z.literal('create_account'),

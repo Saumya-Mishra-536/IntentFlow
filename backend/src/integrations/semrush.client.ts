@@ -1,4 +1,4 @@
-import { SemrushKeywordMetric, SemrushSiteInsightResult, SemrushSiteInput } from '../semrush.types';
+import { SemrushKeywordMetric, SemrushSiteInsightResult, SemrushSiteInput } from '../queue/semrush.types';
 
 const normalize_key = (value: string): string => value.trim().toLowerCase();
 const is_probable_domain = (value: string): boolean => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(value.trim());
@@ -54,7 +54,7 @@ const to_percent_number = (value: unknown): number | undefined => {
   return undefined;
 };
 
-const extract_rows = (raw: unknown): Record<string, unknown>[] => {
+const extract_semrush_rows = (raw: unknown): Record<string, unknown>[] => {
   if (Array.isArray(raw)) {
     return raw.map((entry) => to_record(entry)).filter((entry): entry is Record<string, unknown> => Boolean(entry));
   }
@@ -82,7 +82,7 @@ const extract_rows = (raw: unknown): Record<string, unknown>[] => {
     if (typeof collection === 'string') {
       const parsed = parse_json_payload(collection);
       if (parsed) {
-        const nested = extract_rows(parsed);
+        const nested = extract_semrush_rows(parsed);
         if (nested.length) {
           return nested;
         }
@@ -95,7 +95,7 @@ const extract_rows = (raw: unknown): Record<string, unknown>[] => {
     }
     const as_record = to_record(collection);
     if (as_record) {
-      const nested = extract_rows(as_record);
+      const nested = extract_semrush_rows(as_record);
       if (nested.length) {
         return nested;
       }
@@ -104,7 +104,7 @@ const extract_rows = (raw: unknown): Record<string, unknown>[] => {
   return [];
 };
 
-const to_metric = (entry: Record<string, unknown>): SemrushKeywordMetric | null => {
+const to_semrush_metric = (entry: Record<string, unknown>): SemrushKeywordMetric | null => {
   const keyword = get_string(entry.keyword) ?? get_string(entry.phrase) ?? get_string(entry.query);
   if (!keyword) {
     return null;
@@ -120,9 +120,9 @@ const to_metric = (entry: Record<string, unknown>): SemrushKeywordMetric | null 
   };
 };
 
-const build_summary = (site_name: string, metrics: SemrushKeywordMetric[]): string => {
+const build_semrush_summary = (site_name: string, metrics: SemrushKeywordMetric[]): string => {
   if (!metrics.length) {
-    return `No Ahrefs keyword metrics returned for ${site_name}.`;
+    return `No SEMrush keyword metrics returned for ${site_name}.`;
   }
   const lines = metrics.slice(0, 3).map((item) => {
     const parts = [
@@ -135,8 +135,8 @@ const build_summary = (site_name: string, metrics: SemrushKeywordMetric[]): stri
   return `Top keywords sorted by traffic share: ${lines.join('; ')}`;
 };
 
-const fetch_metrics = async (params: {
-  ahrefs_url: string;
+const fetch_semrush_metrics_for_site = async (params: {
+  semrush_url: string;
   site_name: string;
   site_url?: string;
   seed_keyword?: string;
@@ -151,25 +151,25 @@ const fetch_metrics = async (params: {
   } else if (is_probable_domain(params.site_name)) {
     domain = params.site_name.trim().replace(/^www\./, '');
   }
-  if (!domain) {
-    return [];
-  }
 
-  const ahrefs_url = new URL(params.ahrefs_url);
-  ahrefs_url.searchParams.set('domain', domain);
-  ahrefs_url.searchParams.set('target', domain);
-  ahrefs_url.searchParams.set('mode', 'domain');
-  ahrefs_url.searchParams.set('site_name', params.site_name);
-  if (params.site_url) {
-    ahrefs_url.searchParams.set('site_url', params.site_url);
-    ahrefs_url.searchParams.set('url', params.site_url);
+  const semrush_url = new URL(params.semrush_url);
+  if (domain) {
+    semrush_url.searchParams.set('domain', domain);
   }
   if (params.seed_keyword) {
-    ahrefs_url.searchParams.set('query', params.seed_keyword);
-    ahrefs_url.searchParams.set('keyword', params.seed_keyword);
+    semrush_url.searchParams.set('query', params.seed_keyword);
+    semrush_url.searchParams.set('keyword', params.seed_keyword);
+  }
+  semrush_url.searchParams.set('site_name', params.site_name);
+  if (params.site_url) {
+    semrush_url.searchParams.set('site_url', params.site_url);
+    semrush_url.searchParams.set('url', params.site_url);
   }
 
-  const response = await fetch(ahrefs_url.toString(), { method: 'GET' });
+  const response = await fetch(semrush_url.toString(), {
+    method: 'GET',
+  });
+
   if (!response.ok) {
     return [];
   }
@@ -182,8 +182,8 @@ const fetch_metrics = async (params: {
     return [];
   }
 
-  return extract_rows(raw)
-    .map((entry) => to_metric(entry))
+  return extract_semrush_rows(raw)
+    .map((entry) => to_semrush_metric(entry))
     .filter((entry): entry is SemrushKeywordMetric => Boolean(entry))
     .sort((a, b) => {
       const traffic_share = (b.traffic_percent ?? 0) - (a.traffic_percent ?? 0);
@@ -198,8 +198,8 @@ const fetch_metrics = async (params: {
     });
 };
 
-export const fetch_ahrefs_site_insights = async (params: {
-  ahrefs_url: string;
+export const fetch_semrush_site_insights = async (params: {
+  semrush_url: string;
   sites: SemrushSiteInput[];
   latest_prompt?: string;
 }): Promise<SemrushSiteInsightResult[]> => {
@@ -234,8 +234,8 @@ export const fetch_ahrefs_site_insights = async (params: {
 
   const site_results = await Promise.all(
     unique_sites.map(async (site) => {
-      const metrics = await fetch_metrics({
-        ahrefs_url: params.ahrefs_url,
+      const metrics = await fetch_semrush_metrics_for_site({
+        semrush_url: params.semrush_url,
         site_name: site.site_name,
         site_url: site.site_url,
         seed_keyword: params.latest_prompt,
@@ -248,12 +248,12 @@ export const fetch_ahrefs_site_insights = async (params: {
       const confidence_score = Math.min(0.95, Math.max(0.25, average_traffic_share / 100));
 
       return {
-        source: 'ahrefs',
+        source: 'semrush',
         site_name: site.site_name,
         site_url: site.site_url ?? metrics.find((metric) => metric.url)?.url,
         ranking_keywords,
         confidence_score,
-        summary: build_summary(site.site_name, metrics),
+        summary: build_semrush_summary(site.site_name, metrics),
         keyword_metrics: metrics.slice(0, 15),
       } satisfies SemrushSiteInsightResult;
     }),

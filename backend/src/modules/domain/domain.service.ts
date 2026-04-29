@@ -1,13 +1,13 @@
 import { BaseService } from '../../core/service';
 import { HttpException } from '../../core/http-exception';
-import { OPENAI_API_KEY, OPENAI_MODEL } from '../../config/env';
+import { GEMINI_API_KEY } from '../../config/env';
 import { DomainRepository, domainRepository } from './domain.repository';
 import { DomainContextPayload, DomainSummary } from './domain.model';
 
 const SCRAPE_MAX_PAGES = 12;
 const SCRAPE_PAGE_TIMEOUT_MS = 8_000;
 const SCRAPE_TOTAL_TIMEOUT_MS = 45_000;
-const OPENAI_TIMEOUT_MS = 20_000;
+const GEMINI_TIMEOUT_MS = 20_000;
 const AI_CONTEXT_MAX_CHARS = 26_000;
 
 const STOP_WORDS = new Set([
@@ -300,13 +300,13 @@ const build_heuristic_domain_sections = (params: {
   };
 };
 
-const build_openai_domain_context = async (params: {
+const build_gemini_domain_context = async (params: {
   domain: string;
   summary: string;
   keywords: string[];
   pages: ScrapedPage[];
 }): Promise<Record<string, unknown> | null> => {
-  if (!OPENAI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return null;
   }
 
@@ -324,65 +324,65 @@ const build_openai_domain_context = async (params: {
     .join('\n\n')
     .slice(0, AI_CONTEXT_MAX_CHARS);
 
-  const response = await with_timeout(
-    (signal) =>
-      fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        signal,
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
-          temperature: 0.2,
-          response_format: { type: 'json_object' },
-          messages: [
-            {
-              role: 'system',
-              content: [
-                'You are an AI SEO analyst.',
-                'Return strict JSON only.',
-                'Output keys:',
-                'summary (string),',
-                'business_context (string),',
-                'market_context (string),',
-                'audience_context (string),',
-                'goals_positioning (string),',
-                'products_services (array of strings),',
-                'opportunities (array of strings),',
-                'risks (array of strings),',
-                'messaging (array of strings),',
-                'seo_focus_keywords (array of strings).',
-                'Do not include markdown.',
-              ].join(' '),
-            },
-            {
-              role: 'user',
-              content: [
-                `Domain: ${params.domain}`,
-                `Summary: ${params.summary}`,
-                `Keywords: ${params.keywords.join(', ') || 'none'}`,
-                'Pages:',
-                snippets,
-              ].join('\n\n'),
-            },
-          ],
-        }),
-      }),
-    OPENAI_TIMEOUT_MS,
-  );
+  const prompt = `
+    You are an AI SEO analyst. 
+    Analyze the following website data and return a JSON object containing:
+    - summary (string): A 2-3 sentence overview of the business.
+    - business_context (string): Deep dive into their business model.
+    - market_context (string): Who are their competitors and where do they sit in the market?
+    - audience_context (string): Who is the target customer?
+    - goals_positioning (string): What are they trying to achieve?
+    - products_services (array of strings): List of main offerings.
+    - opportunities (array of strings): High-level growth/SEO opportunities.
+    - risks (array of strings): Potential business/SEO threats.
+    - messaging (array of strings): Key value propositions found.
+    - seo_focus_keywords (array of strings): 10-15 keywords to target.
 
-  const raw_text = await response.text();
-  if (!response.ok) {
+    Website: ${params.domain}
+    Existing Summary: ${params.summary}
+    Keywords: ${params.keywords.join(', ')}
+    
+    Page Content:
+    ${snippets}
+
+    Return ONLY raw JSON. Do not use markdown blocks.
+  `;
+
+  try {
+    const response = await with_timeout(
+      (signal) =>
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              response_mime_type: "application/json"
+            }
+          }),
+        }),
+      GEMINI_TIMEOUT_MS,
+    );
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('[Gemini Error]', err);
+      return null;
+    }
+
+    const data = await response.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) return null;
+
+    return parse_json_object_from_text(textContent);
+  } catch (error) {
+    console.error('[Gemini Request Failed]', error);
     return null;
   }
-  const parsed = parse_json_object_from_text(raw_text);
-  const choice = to_record(to_array(to_record(parsed)?.choices)[0]) ?? {};
-  const message = to_record(choice.message) ?? {};
-  const content = get_string(message.content);
-  if (!content) return null;
-  return parse_json_object_from_text(content);
 };
 
 const to_domain_summary = (domain: {
@@ -546,7 +546,7 @@ export class DomainService extends BaseService {
         excerpt: page.excerpt,
       }));
 
-      const ai_context = await build_openai_domain_context({
+      const ai_context = await build_gemini_domain_context({
         domain: new URL(params.homepage_url).hostname,
         summary,
         keywords,
@@ -576,7 +576,7 @@ export class DomainService extends BaseService {
           ? normalize_string_array(ai_context?.seo_focus_keywords, 18)
           : keywords,
         scrape_engine,
-        summary_provider: ai_context ? 'openai' : 'heuristic',
+        summary_provider: ai_context ? 'gemini' : 'heuristic',
       };
 
       await this.repository.saveDomainContext({
