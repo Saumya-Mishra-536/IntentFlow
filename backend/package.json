@@ -13,7 +13,7 @@
     "prisma:push": "prisma db push"
   },
   "prisma": {
-    "schema": "../data/prisma/schema.prisma"
+    "schema": "prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
