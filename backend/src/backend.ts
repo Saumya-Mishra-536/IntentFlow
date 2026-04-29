@@ -157,6 +157,34 @@ export const randomToken = (bytes = 32): string => crypto.randomBytes(bytes).toS
 export const hashToken = (token: string): string =>
   crypto.createHash('sha256').update(token).digest('hex');
 
+// --- Merged from types/cors.d.ts ---
+declare module 'cors';
+// --- Merged from types/express.d.ts ---
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    tenant_id: string;
+    tenant_role?: string;
+    app_role?: string;
+    needs_password?: boolean;
+  };
+}
+
+
+// --- Merged from utils/bcrypt.ts ---
+
+const SALT_ROUNDS = 10;
+
+export const hashPassword = async (plain: string): Promise<string> => {
+  return bcrypt.hash(plain, SALT_ROUNDS);
+};
+
+export const comparePassword = async (plain: string, hash: string): Promise<boolean> => {
+  return bcrypt.compare(plain, hash);
+};
+
+
 // --- Merged from core/api-response.ts ---
 export interface ApiSuccessResponse<T> {
   success: true;
@@ -9397,32 +9425,4 @@ const startServer = async () => {
 };
 
 void startServer();
-
-// --- Merged from types/cors.d.ts ---
-declare module 'cors';
-// --- Merged from types/express.d.ts ---
-
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    tenant_id: string;
-    tenant_role?: string;
-    app_role?: string;
-    needs_password?: boolean;
-  };
-}
-
-
-// --- Merged from utils/bcrypt.ts ---
-
-const SALT_ROUNDS = 10;
-
-export const hashPassword = async (plain: string): Promise<string> => {
-  return bcrypt.hash(plain, SALT_ROUNDS);
-};
-
-export const comparePassword = async (plain: string, hash: string): Promise<boolean> => {
-  return bcrypt.compare(plain, hash);
-};
-
 
