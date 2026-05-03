@@ -1,16 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
+import LoginPage from './features/auth/pages/login-page';
+import AuthCallbackPage from './features/auth/pages/auth-callback-page';
 import AppLayout from './features/core/pages/app-layout';
 import DashboardPage from './features/core/pages/dashboard-page';
 import CampaignListPage from './features/campaign/pages/campaign-list-page';
 import CampaignGraphPage from './features/campaign/pages/campaign-graph-page';
 import { Toaster } from 'sonner';
 
-// Temporary Mock Auth Guard
+// Functional Auth Guard
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // In a real app, check AuthContext here
-  const isAuthenticated = true; // Mocking auth for now
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  const token = localStorage.getItem('token');
+  return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -20,7 +21,8 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<div className="min-h-screen bg-black flex items-center justify-center text-white">Login Page (Coming Soon)</div>} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
         {/* App Routes */}
         <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
