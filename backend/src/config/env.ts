@@ -5,8 +5,9 @@ dotenv.config();
 const getEnv = (key: string, defaultValue?: string): string => {
   const value = process.env[key] ?? defaultValue;
   
-  if (value === undefined || (process.env.NODE_ENV === 'production' && !value && !defaultValue)) {
-    throw new Error(`Environment variable ${key} is required but not set`);
+  if (value === undefined || (process.env.NODE_ENV === 'production' && !value && defaultValue === undefined)) {
+    console.error(`❌ Environment variable ${key} is required but not set. This may cause runtime errors.`);
+    return defaultValue ?? '';
   }
   
   return value ?? '';
