@@ -9,7 +9,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": ["node", "express"],
     "baseUrl": "src",
     "paths": {
       "@config/*": ["config/*"],
