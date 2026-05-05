@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": ["node", "express"],
-    "baseUrl": "src",
+    "baseUrl":  "src",
     "paths": {
       "@config/*": ["config/*"],
       "@core/*": ["core/*"],
