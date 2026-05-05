@@ -1,0 +1,242 @@
+
+<style>
+#erd { padding: 8px 0; }
+#erd svg { width: 100%; }
+</style>
+<h2 class="sr-only">IntentFlow ER Diagram showing database entities and their relationships</h2>
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  User {
+    uuid id PK
+    string email
+    string name
+    string app_role
+    string company_domain
+    float lead_score_current
+    string lead_segment
+    string active_tenant_id FK
+  }
+  Tenant {
+    uuid id PK
+    string slug
+    string name
+    string owner_user_id FK
+  }
+  TenantMember {
+    uuid id PK
+    string tenant_id FK
+    string user_id FK
+    string role
+  }
+  OAuthAccount {
+    uuid id PK
+    string user_id FK
+    string provider
+    string provider_account_id
+  }
+  RefreshToken {
+    uuid id PK
+    string user_id FK
+    string token_hash
+    datetime expires_at
+  }
+  AuthCode {
+    uuid id PK
+    string user_id FK
+    string code_hash
+    string status
+    datetime expires_at
+  }
+  Domain {
+    uuid id PK
+    string tenant_id FK
+    string normalized_domain
+    string scrape_status
+    string created_by_user_id FK
+  }
+  DomainContext {
+    uuid id PK
+    string domain_id FK
+    json context_json
+    json pages_json
+  }
+  DomainScrapeRun {
+    uuid id PK
+    string domain_id FK
+    string status
+    int page_count
+  }
+  AccountJoinRequest {
+    uuid id PK
+    string tenant_id FK
+    string requestor_user_id FK
+    string resolved_by_user_id FK
+    string status
+  }
+  Campaign {
+    uuid id PK
+    string tenant_id FK
+    string domain_id FK
+    string created_by_user_id FK
+    string name
+    string primary_goal
+  }
+  CampaignVersion {
+    uuid id PK
+    string campaign_id FK
+    string tenant_id FK
+    string created_by_user_id FK
+    int version_number
+    string status
+    boolean is_active
+  }
+  CaptureSession {
+    uuid id PK
+    string tenant_id FK
+    string campaign_version_id FK
+    string chat_provider
+    string conversation_id
+    string status
+  }
+  CaptureTurn {
+    uuid id PK
+    string tenant_id FK
+    string capture_session_id FK
+    string prompt
+    json raw_event_json
+  }
+  PromptNode {
+    uuid id PK
+    string tenant_id FK
+    string campaign_version_id FK
+    string capture_session_id FK
+    string capture_turn_id FK
+    string parent_id FK
+    string type
+    string content
+    int depth
+  }
+  SemrushSnapshot {
+    uuid id PK
+    string tenant_id FK
+    string campaign_version_id FK
+    string prompt_node_id FK
+    string query_text
+    json summary_metrics
+  }
+  GenerationRun {
+    uuid id PK
+    string tenant_id FK
+    string campaign_version_id FK
+    string capture_turn_id FK
+    string status
+    int depth_limit
+  }
+  AnalyticsEvent {
+    uuid id PK
+    string tenant_id FK
+    string user_id FK
+    string campaign_id FK
+    string event_name
+    json properties
+  }
+  LeadSignal {
+    uuid id PK
+    string tenant_id FK
+    string user_id FK
+    string campaign_version_id FK
+    string source_turn_id FK
+    string signal_type
+    float confidence
+  }
+
+  User ||--o{ OAuthAccount : "has"
+  User ||--o{ RefreshToken : "has"
+  User ||--o{ AuthCode : "has"
+  User ||--o{ TenantMember : "belongs to"
+  User ||--o{ Tenant : "owns"
+  User ||--o{ Domain : "creates"
+  User ||--o{ Campaign : "creates"
+  User ||--o{ CampaignVersion : "creates"
+  User ||--o{ AnalyticsEvent : "triggers"
+  User ||--o{ LeadSignal : "generates"
+  User ||--o{ AccountJoinRequest : "requests"
+
+  Tenant ||--o{ TenantMember : "has"
+  Tenant ||--o{ Domain : "has"
+  Tenant ||--o{ Campaign : "has"
+  Tenant ||--o{ CampaignVersion : "has"
+  Tenant ||--o{ CaptureSession : "has"
+  Tenant ||--o{ CaptureTurn : "has"
+  Tenant ||--o{ PromptNode : "has"
+  Tenant ||--o{ SemrushSnapshot : "has"
+  Tenant ||--o{ GenerationRun : "has"
+  Tenant ||--o{ AnalyticsEvent : "has"
+  Tenant ||--o{ LeadSignal : "has"
+  Tenant ||--o{ AccountJoinRequest : "has"
+
+  Domain ||--o| DomainContext : "has"
+  Domain ||--o{ DomainScrapeRun : "has"
+  Domain ||--o{ Campaign : "links to"
+
+  Campaign ||--o{ CampaignVersion : "has"
+  Campaign ||--o{ AnalyticsEvent : "tracks"
+
+  CampaignVersion ||--o{ CaptureSession : "has"
+  CampaignVersion ||--o{ PromptNode : "contains"
+  CampaignVersion ||--o{ SemrushSnapshot : "has"
+  CampaignVersion ||--o{ GenerationRun : "has"
+  CampaignVersion ||--o{ LeadSignal : "has"
+
+  CaptureSession ||--o{ CaptureTurn : "contains"
+  CaptureSession ||--o{ PromptNode : "links to"
+
+  CaptureTurn ||--o{ PromptNode : "materializes"
+  CaptureTurn ||--o{ GenerationRun : "triggers"
+  CaptureTurn ||--o{ LeadSignal : "sources"
+
+  PromptNode ||--o{ PromptNode : "parent of"
+  PromptNode ||--o{ SemrushSnapshot : "has"
+`);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
